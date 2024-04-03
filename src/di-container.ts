@@ -1,6 +1,12 @@
 import {isFunction} from './utils';
-import {DiToken} from "./token";
-import {IDiContainer, InstanceFactory, IScopedDiContainer, TypedInstanceFactory} from "./interfaces";
+import {DiToken, DiTokenBase, ScopedDiToken} from "./token";
+import {
+    IDiContainer,
+    InstanceFactory,
+    IScopedDiContainer,
+    ScopedInstanceFactory,
+    TypedInstanceFactory, TypedScopedInstanceFactory
+} from "./interfaces";
 
 export type DiContainerOption = {
     overridesBehaviour: "use-last" | "use-first" | "deny";
@@ -9,7 +15,7 @@ export type DiContainerOption = {
 export class DiContainer implements IDiContainer {
     protected singletonInstances: Map<symbol, Array<any>> = new Map<symbol, Array<any>>();
     protected singletonFactories: Map<symbol, Array<InstanceFactory>> = new Map<symbol, Array<InstanceFactory>>();
-    protected scopedFactories: Map<symbol, Array<InstanceFactory>> = new Map<symbol, Array<InstanceFactory>>();
+    protected scopedFactories: Map<symbol, Array<ScopedInstanceFactory>> = new Map<symbol, Array<ScopedInstanceFactory>>();
     protected containerOption: DiContainerOption;
 
     constructor(containerOption?: DiContainerOption) {
@@ -33,7 +39,7 @@ export class DiContainer implements IDiContainer {
         }
     }
 
-    registerScoped<T>(token: DiToken<T>, factory: TypedInstanceFactory<T>): void {
+    registerScoped<T>(token: ScopedDiToken<T>, factory: TypedInstanceFactory<T>): void {
         this.ensureCanBeRegistered(token, 'scoped');
 
         let scopedFactories = this.scopedFactories.get(token.symbol);
@@ -44,19 +50,19 @@ export class DiContainer implements IDiContainer {
         scopedFactories.push(factory);
     }
 
-    isRegistered<T>(token: DiToken<T>): boolean {
+    isRegistered<T>(token: DiTokenBase<T>): boolean {
         return this.isSingletonRegistered(token) || this.isScopedRegistered(token);
     }
 
-    isSingletonRegistered<T>(token: DiToken<T>): boolean {
+    isSingletonRegistered<T>(token: DiTokenBase<T>): boolean {
         return this.singletonInstances.has(token.symbol) || this.singletonFactories.has(token.symbol);
     }
 
-    isScopedRegistered<T>(token: DiToken<T>) {
+    isScopedRegistered<T>(token: DiTokenBase<T>) {
         return this.scopedFactories.has(token.symbol);
     }
 
-    ensureCanBeRegistered<T>(token: DiToken<T>, scope: 'singleton' | 'scoped') {
+    ensureCanBeRegistered<T>(token: DiTokenBase<T>, scope: 'singleton' | 'scoped') {
         if (this.containerOption.overridesBehaviour === "deny" && this.isRegistered(token))
             throw new Error(`The key '${token.symbol.toString()}' is already registered in the DI container`);
         if (scope === 'scoped' && this.isSingletonRegistered(token))
@@ -79,7 +85,7 @@ export class DiContainer implements IDiContainer {
         if (instance)
             return instance;
 
-        const newInstance = this.tryResolveFromFactory(token, this.singletonFactories);
+        const newInstance = this.tryResolveSingletonFromFactory(token);
         if (newInstance)
             return this.saveSingletonInstance(token, newInstance);
 
@@ -90,7 +96,7 @@ export class DiContainer implements IDiContainer {
         return undefined;
     }
 
-    tryResolveScopedFactory<T>(token: DiToken<T>): TypedInstanceFactory<T> | undefined {
+    tryResolveScopedFactory<T>(token: DiTokenBase<T>): TypedInstanceFactory<T> | undefined {
         return this.tryResolveFrom<TypedInstanceFactory<T>>(token, this.scopedFactories);
     }
 
@@ -98,7 +104,7 @@ export class DiContainer implements IDiContainer {
         return new ScopedDiContainer(this);
     }
 
-    protected tryResolveFrom<T>(token: DiToken<T>, registrations: Map<symbol, Array<T>>): T | undefined {
+    protected tryResolveFrom<T>(token: DiTokenBase<T>, registrations: Map<symbol, Array<T>>): T | undefined {
         const registeredElements = registrations.get(token.symbol);
         if (registeredElements !== undefined && registeredElements.length > 0) {
             if (this.containerOption.overridesBehaviour === "use-last") {
@@ -110,8 +116,8 @@ export class DiContainer implements IDiContainer {
         return undefined;
     }
 
-    protected tryResolveFromFactory<T>(token: DiToken<T>, registrations: Map<symbol, Array<InstanceFactory>>): T | undefined {
-        const registeredElements = registrations.get(token.symbol);
+    private tryResolveSingletonFromFactory<T>(token: DiToken<T>): T | undefined {
+        const registeredElements = this.singletonFactories.get(token.symbol);
         if (registeredElements !== undefined && registeredElements.length > 0) {
             let factory: InstanceFactory;
             if (this.containerOption.overridesBehaviour === "use-last") {
@@ -142,7 +148,7 @@ export class ScopedDiContainer extends DiContainer {
         super();
     }
 
-    override registerScoped<T>(token: DiToken<T>, valueOrFactory: TypedInstanceFactory<T> | T): void {
+    override registerScoped<T>(token: ScopedDiToken<T>, valueOrFactory: TypedScopedInstanceFactory<T> | T): void {
         if (isFunction(valueOrFactory))
             super.registerScoped(token, valueOrFactory);
         else {
@@ -151,37 +157,54 @@ export class ScopedDiContainer extends DiContainer {
         }
     }
 
-    override isScopedRegistered<T>(token: DiToken<T>) {
+    override isScopedRegistered<T>(token: DiTokenBase<T>) {
         return super.isScopedRegistered(token) || this.scopedInstances.has(token.symbol);
     }
 
-    override tryResolve<T>(token: DiToken<T>): T | undefined {
+    override tryResolve<T>(token: DiTokenBase<T>): T | undefined {
         const instance = this.tryResolveFrom(token, this.scopedInstances);
         if (instance)
             return instance;
 
-        const newInstance = this.tryResolveFromFactory(token, this.scopedFactories);
-        if (newInstance)
-            return this.saveScopeInstances(token, newInstance);
+        if (token instanceof ScopedDiToken) {
+            const newInstance = this.tryResolveScopedFromFactory(token);
+            if (newInstance)
+                return this.saveScopeInstances(token, newInstance);
 
-        const parentScopedFactory = this.parentContainer.tryResolveScopedFactory(token);
-        if (parentScopedFactory) {
-            return this.saveScopeInstances(token, parentScopedFactory(this));
-        }
-
-        const singletonInstance = super.tryResolve(token);
-        if (singletonInstance) {
-            return singletonInstance;
+            const parentScopedFactory = this.parentContainer.tryResolveScopedFactory(token);
+            if (parentScopedFactory) {
+                return this.saveScopeInstances(token, parentScopedFactory(this));
+            }
+        } else if (token instanceof DiToken) {
+            const singletonInstance = super.tryResolve(token);
+            if (singletonInstance) {
+                return singletonInstance;
+            }
         }
 
         return this.parentContainer.tryResolve<T>(token);
     }
 
+    private tryResolveScopedFromFactory<T>(token: ScopedDiToken<T>): T | undefined {
+        const registeredElements = this.scopedFactories.get(token.symbol);
+        if (registeredElements !== undefined && registeredElements.length > 0) {
+            let factory: InstanceFactory;
+            if (this.containerOption.overridesBehaviour === "use-last") {
+                factory = registeredElements[registeredElements.length - 1];
+            } else {
+                factory = registeredElements[0];
+            }
+            return factory(this);
+        }
+        return undefined;
+    }
+
+
     override createScope(): IScopedDiContainer {
         return new ScopedDiContainer(this);
     }
 
-    private saveScopeInstances<T>(token: DiToken<T>, value: T): T {
+    private saveScopeInstances<T>(token: ScopedDiToken<T>, value: T): T {
         let scopedInstances = this.scopedInstances.get(token.symbol);
         if (scopedInstances === undefined) {
             scopedInstances = [];

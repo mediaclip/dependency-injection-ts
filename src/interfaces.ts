@@ -1,24 +1,28 @@
-import {DiToken} from "./token";
+import {DiToken, DiTokenBase, ScopedDiToken} from "./token";
 
 export type InstanceFactory = (container: IDiContainer) => any;
 export type TypedInstanceFactory<T> = (container: IDiContainer) => T;
+export type ScopedInstanceFactory = (container: IScopedDiContainer) => any;
+export type TypedScopedInstanceFactory<T> = (container: IScopedDiContainer) => T;
 
 export interface IDiContainer {
     registerSingleton<T>(token: DiToken<T>, valueOrFactory: TypedInstanceFactory<T> | T): void;
 
-    registerScoped<T>(token: DiToken<T>, factory: TypedInstanceFactory<T>): void;
+    registerScoped<T>(token: ScopedDiToken<T>, factory: TypedScopedInstanceFactory<T>): void;
 
     createScope(): IScopedDiContainer;
 
-    isRegistered<T>(token: DiToken<T>): boolean;
+    isRegistered<T>(token: DiTokenBase<T>): boolean;
 
-    resolve<T>(token: DiToken<T>): T;
+    resolve<T>(token: DiTokenBase<T>): T;
 
-    tryResolve<T>(token: DiToken<T>): T | undefined;
+    tryResolve<T>(token: DiTokenBase<T>): T | undefined;
 
-    tryResolveScopedFactory<T>(token: DiToken<T>): TypedInstanceFactory<T> | undefined;
+    tryResolveScopedFactory<T>(token: ScopedDiToken<T>): TypedInstanceFactory<T> | undefined;
 }
 
 export interface IScopedDiContainer extends IDiContainer {
-    registerScoped<T>(token: DiToken<T>, valueOrFactory: ((container: IDiContainer) => T) | T): void;
+    registerScoped<T>(token: ScopedDiToken<T>, valueOrFactory: TypedScopedInstanceFactory<T> | T): void;
+
+    resolve<T>(token: ScopedDiToken<T>): T;
 }
