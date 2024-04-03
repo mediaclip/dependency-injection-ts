@@ -4,7 +4,7 @@
     "repository": "https://github.com/mediaclip/dependency-injection-ts",
     "description": "Another strongly-typed dependency injection. Without decorators",
     "name": "@mediaclip/dependency-injection",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "main": "./dist/index.js",
     "keywords": [
         "dependency",

@@ -1,10 +1,19 @@
 {
-  "name": "simple-sample",
-  "version": "1.0.0",
-  "type": "module",
-  "license": "MIT",
-  "dependencies": {
-    "typescript": "^5.4.3",
-    "@mediaclip/dependency-injection": "^1.0.0"
-  }
+    "name": "simple-sample",
+    "version": "1.0.0",
+    "type": "commonjs",
+    "license": "MIT",
+    "private": true,
+    "scripts": {
+        "scoped": "esbuild src/scoped.ts --bundle --outfile=dist/scoped.js && node dist/scoped.js",
+        "simple": "esbuild src/simple.ts --bundle --outfile=dist/simple.js && node dist/simple.js",
+        "module": "esbuild src/module.ts --bundle --outfile=dist/module.js && node dist/module.js"
+    },
+    "dependencies": {
+        "typescript": "^5.4.3",
+        "@mediaclip/dependency-injection": "^1.0.1"
+    },
+    "devDependencies": {
+        "esbuild": "^0.20.2"
+    }
 }
