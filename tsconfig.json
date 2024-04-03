@@ -1,9 +1,11 @@
 {
     "compilerOptions": {
+        "declaration": true,
         "rootDir": "src",
         "outDir": "dist",
         "module": "commonjs",
         "target": "es6",
         "strictNullChecks": true,
+        "esModuleInterop": true
     }
 }

@@ -1,11 +1,11 @@
 import {IScopedDiContainer, ScopedDiContainer} from './scoped-di-container';
-import {disposeIfDisposable, isFunction} from './utils';
+import {isFunction} from './utils';
 import {DiToken} from "./token";
 
 type InstanceFactory = (container: IDiContainer) => any;
 type TypedInstanceFactory<T> = (container: IDiContainer) => T;
 
-export interface IDiContainer extends Disposable {
+export interface IDiContainer {
     registerSingleton<T>(token: DiToken<T>, valueOrFactory: TypedInstanceFactory<T> | T): void;
 
     registerScoped<T>(token: DiToken<T>, factory: TypedInstanceFactory<T>): void;
@@ -115,12 +115,6 @@ export class DiContainer implements IDiContainer {
 
     createScope(): IScopedDiContainer {
         return new ScopedDiContainer(this);
-    }
-
-    [Symbol.dispose](): void {
-        for (const instance of Object.values(this.singletonInstances)) {
-            disposeIfDisposable(instance)
-        }
     }
 
     protected tryResolveFrom<T>(token: DiToken<T>, registrations: Map<symbol, Array<T>>): T | undefined {

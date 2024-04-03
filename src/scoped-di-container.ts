@@ -1,5 +1,5 @@
 import {DiContainer, IDiContainer} from './di-container';
-import {disposeIfDisposable, isFunction} from './utils';
+import {isFunction} from './utils';
 import {DiToken} from "./token";
 
 
@@ -51,13 +51,6 @@ export class ScopedDiContainer extends DiContainer {
 
     override createScope(): IScopedDiContainer {
         return new ScopedDiContainer(this);
-    }
-
-    override [Symbol.dispose](): void {
-        for (const instance of Object.values(this.scopedInstances)) {
-            disposeIfDisposable(instance);
-        }
-        super[Symbol.dispose]();
     }
 
     private saveScopeInstances<T>(token: DiToken<T>, value: T): T {
