@@ -1,0 +1,36 @@
+{
+    "type": "module",
+    "license": "MIT",
+    "repository": "https://github.com/mediaclip/dependency-injection-ts",
+    "description": "Another strongly-typed dependency injection. Without decorators",
+    "name": "@mediaclip/dependency-injection",
+    "version": "1.0.0",
+    "main": "./dist/index.js",
+    "keywords": [
+        "dependency",
+        "injection"
+    ],
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        "require": {
+            "types": "./dist/index.d.cts",
+            "default": "./dist/index.cjs"
+        },
+        "import": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsup",
+        "clean": "tsc --build --clean --incremental tsconfig.json"
+    },
+    "dependencies": {
+        "@types/node": "^18.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.4.3",
+        "tsup": "^8.0.2"
+    }
+}
