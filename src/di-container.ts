@@ -93,11 +93,11 @@ export class DiContainer implements IDiContainer {
 
     tryResolve<T>(token: DiToken<T>): T | undefined {
         const instance = this.tryResolveFrom(token, this.singletonInstances);
-        if (instance)
+        if (instance !== undefined)
             return instance;
 
         const newInstance = this.tryResolveSingletonFromFactory(token);
-        if (newInstance)
+        if (newInstance !== undefined)
             return this.saveSingletonInstance(token, newInstance);
 
         if (this.scopedFactories.has(token.symbol)) {
@@ -180,32 +180,32 @@ export class ScopedDiContainer extends DiContainer implements IScopedDiContainer
     }
 
     override tryResolve<T>(token: DiToken<T> | ScopedDiToken<T>, container?: ScopedDiContainer): T | undefined {
-        if (token instanceof ScopedDiToken) {
+        if (token.scope === 'scoped') {
             const instance = this.tryResolveInstance(token);
-            if (instance)
+            if (instance  !== undefined)
                 return instance;
 
             const newInstance = this.tryResolveScopedFromFactory(token, container);
-            if (newInstance)
+            if (newInstance !== undefined)
                 return this.saveScopeInstances(token, newInstance);
 
             const parentScopedFactory = this.parentContainer.tryResolveScopedFactory(token);
-            if (parentScopedFactory) {
+            if (parentScopedFactory !== undefined) {
                 return this.saveScopeInstances(token, parentScopedFactory(container ?? this));
             }
 
             if(this.parentContainer instanceof ScopedDiContainer) {
                 const parentInstance = this.parentContainer.tryResolve<T>(token, container);
-                if (parentInstance)
+                if (parentInstance !== undefined)
                     return parentInstance;
             }
 
-        } else if (token instanceof DiToken) {
+        } else if (token.scope === 'singleton') {
             const singletonInstance = super.tryResolve(token);
-            if (singletonInstance) {
+            if (singletonInstance !== undefined) {
                 return singletonInstance;
             }
-            return this.parentContainer.tryResolve<T>(token);
+            return this.parentContainer.tryResolve<T>(token, container);
         }
     }
 
