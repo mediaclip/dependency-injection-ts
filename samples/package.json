@@ -10,10 +10,10 @@
         "module": "esbuild src/module.ts --bundle --outfile=dist/module.js && node dist/module.js"
     },
     "dependencies": {
-        "typescript": "^5.4.3",
+        "typescript": "^5.8.3",
         "@mediaclip/dependency-injection": "^1.0.1"
     },
     "devDependencies": {
-        "esbuild": "^0.20.2"
+        "esbuild": "^0.25.5"
     }
 }
